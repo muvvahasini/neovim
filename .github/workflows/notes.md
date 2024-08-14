@@ -9,35 +9,34 @@ ${NVIM_VERSION}
 #### Zip
 
 1. Download **nvim-win64.zip**
-2. Extract the zip.
-3. Run `nvim-qt.exe`
+2. Extract the zip
+3. Run `nvim.exe` on your CLI of choice
 
 #### MSI
 
 1. Download **nvim-win64.msi**
 2. Run the MSI
-3. Search and run `nvim-qt.exe` or run `nvim.exe` on your CLI of choice.
+3. Run `nvim.exe` on your CLI of choice
 
-### macOS
+### macOS (x86_64)
 
-1. Download **nvim-macos.tar.gz**
-2. Run `xattr -c ./nvim-macos.tar.gz` (to avoid "unknown developer" warning)
-3. Extract: `tar xzvf nvim-macos.tar.gz`
-4. Run `./nvim-macos/bin/nvim`
+1. Download **nvim-macos-x86_64.tar.gz**
+2. Run `xattr -c ./nvim-macos-x86_64.tar.gz` (to avoid "unknown developer" warning)
+3. Extract: `tar xzvf nvim-macos-x86_64.tar.gz`
+4. Run `./nvim-macos-x86_64/bin/nvim`
+
+### macOS (arm64)
+
+1. Download **nvim-macos-arm64.tar.gz**
+2. Run `xattr -c ./nvim-macos-arm64.tar.gz` (to avoid "unknown developer" warning)
+3. Extract: `tar xzvf nvim-macos-arm64.tar.gz`
+4. Run `./nvim-macos-arm64/bin/nvim`
 
 ### Linux (x64)
 
-#### Tarball
-
-1. Download **nvim-linux64.tar.gz**
-2. Extract: `tar xzvf nvim-linux64.tar.gz`
-3. Run `./nvim-linux64/bin/nvim`
-
-#### Debian Package
-
-1. Download **nvim-linux64.deb**
-2. Install the package using `sudo apt install ./nvim-linux64.deb`
-3. Run `nvim`
+Minimum glibc version to run these releases is 2.31. People requiring releases
+that work on older glibc versions can find them at
+https://github.com/neovim/neovim-releases.
 
 #### AppImage
 1. Download **nvim.appimage**
@@ -48,18 +47,24 @@ ${NVIM_VERSION}
      ./squashfs-root/usr/bin/nvim
      ```
 
+#### Tarball
+
+1. Download **nvim-linux64.tar.gz**
+2. Extract: `tar xzvf nvim-linux64.tar.gz`
+3. Run `./nvim-linux64/bin/nvim`
+
 ### Other
 
-- Install by [package manager](https://github.com/neovim/neovim/wiki/Installing-Neovim)
+- Install by [package manager](https://github.com/neovim/neovim/blob/master/INSTALL.md#install-from-package)
 
 ## SHA256 Checksums
 
 ```
 ${SHA_LINUX_64_TAR}
-${SHA_LINUX_64_DEB}
 ${SHA_APP_IMAGE}
 ${SHA_APP_IMAGE_ZSYNC}
-${SHA_MACOS}
+${SHA_MACOS_X86_64}
+${SHA_MACOS_ARM64}
 ${SHA_WIN_64_ZIP}
 ${SHA_WIN_64_MSI}
 ```

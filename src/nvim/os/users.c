@@ -1,6 +1,3 @@
-// This is an open source non-commercial project. Dear PVS-Studio, please check
-// it. PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-
 // users.c -- operating system user information
 
 #include <stdbool.h>
@@ -9,17 +6,26 @@
 #include <uv.h>
 
 #include "auto/config.h"
-#include "nvim/ascii.h"
+#include "nvim/ascii_defs.h"
+#include "nvim/cmdexpand_defs.h"
 #include "nvim/garray.h"
+#include "nvim/garray_defs.h"
 #include "nvim/memory.h"
 #include "nvim/os/os.h"
-#include "nvim/types.h"
-#include "nvim/vim.h"
-#ifdef HAVE_PWD_H
+#include "nvim/os/os_defs.h"
+#include "nvim/vim_defs.h"
+#ifdef HAVE_PWD_FUNCS
 # include <pwd.h>
 #endif
 #ifdef MSWIN
 # include <lm.h>
+
+# include "nvim/mbyte.h"
+# include "nvim/message.h"
+#endif
+
+#ifdef INCLUDE_GENERATED_DECLARATIONS
+# include "os/users.c.generated.h"
 #endif
 
 // All user names (for ~user completion as done by shell).
@@ -30,7 +36,7 @@ static garray_T ga_users = GA_EMPTY_INIT_VALUE;
 static void add_user(garray_T *users, char *user, bool need_copy)
 {
   char *user_copy = (user != NULL && need_copy)
-    ? xstrdup(user) : user;
+                    ? xstrdup(user) : user;
 
   if (user_copy == NULL || *user_copy == NUL) {
     if (need_copy) {
@@ -50,7 +56,7 @@ int os_get_usernames(garray_T *users)
   }
   ga_init(users, sizeof(char *), 20);
 
-#if defined(HAVE_GETPWENT) && defined(HAVE_PWD_H)
+#ifdef HAVE_PWD_FUNCS
   {
     struct passwd *pw;
 
@@ -81,7 +87,7 @@ int os_get_usernames(garray_T *users)
     }
   }
 #endif
-#if defined(HAVE_GETPWNAM)
+#ifdef HAVE_PWD_FUNCS
   {
     const char *user_env = os_getenv("USER");
 
@@ -141,7 +147,7 @@ int os_get_username(char *s, size_t len)
 /// @return OK if a username was found, else FAIL.
 int os_get_uname(uv_uid_t uid, char *s, size_t len)
 {
-#if defined(HAVE_PWD_H) && defined(HAVE_GETPWUID)
+#ifdef HAVE_PWD_FUNCS
   struct passwd *pw;
 
   if ((pw = getpwuid(uid)) != NULL  // NOLINT(runtime/threadsafe_fn)
@@ -159,7 +165,7 @@ int os_get_uname(uv_uid_t uid, char *s, size_t len)
 /// Caller must free() the returned string.
 char *os_get_userdir(const char *name)
 {
-#if defined(HAVE_GETPWNAM) && defined(HAVE_PWD_H)
+#ifdef HAVE_PWD_FUNCS
   if (name == NULL || *name == NUL) {
     return NULL;
   }
@@ -186,7 +192,7 @@ void free_users(void)
 /// Done only once and then cached.
 static void init_users(void)
 {
-  static int lazy_init_done = false;
+  static bool lazy_init_done = false;
 
   if (lazy_init_done) {
     return;
@@ -197,7 +203,7 @@ static void init_users(void)
   os_get_usernames(&ga_users);
 }
 
-/// Given to ExpandGeneric() to obtain an user names.
+/// Given to ExpandGeneric() to obtain user names.
 char *get_users(expand_T *xp, int idx)
 {
   init_users();

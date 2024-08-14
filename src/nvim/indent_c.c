@@ -1,13 +1,10 @@
-// This is an open source non-commercial project. Dear PVS-Studio, please check
-// it. PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "nvim/ascii.h"
+#include "nvim/ascii_defs.h"
 #include "nvim/buffer_defs.h"
 #include "nvim/charset.h"
 #include "nvim/cursor.h"
@@ -15,15 +12,19 @@
 #include "nvim/globals.h"
 #include "nvim/indent.h"
 #include "nvim/indent_c.h"
-#include "nvim/macros.h"
-#include "nvim/mark.h"
+#include "nvim/macros_defs.h"
+#include "nvim/mark_defs.h"
 #include "nvim/memline.h"
 #include "nvim/memory.h"
 #include "nvim/option.h"
-#include "nvim/pos.h"
+#include "nvim/option_vars.h"
+#include "nvim/plines.h"
+#include "nvim/pos_defs.h"
 #include "nvim/search.h"
+#include "nvim/state_defs.h"
 #include "nvim/strings.h"
-#include "nvim/vim.h"
+#include "nvim/types_defs.h"
+#include "nvim/vim_defs.h"
 
 // Find result cache for cpp_baseclass
 typedef struct {
@@ -47,7 +48,7 @@ pos_T *find_start_comment(int ind_maxcomment)  // XXX
   pos_T *pos;
   int64_t cur_maxcomment = ind_maxcomment;
 
-  for (;;) {
+  while (true) {
     pos = findmatchlimit(NULL, '*', FM_BACKWARD, cur_maxcomment);
     if (pos == NULL) {
       break;
@@ -106,9 +107,9 @@ static pos_T *ind_find_start_CORS(linenr_T *is_raw)
 static pos_T *find_start_rawstring(int ind_maxcomment)  // XXX
 {
   pos_T *pos;
-  long cur_maxcomment = ind_maxcomment;
+  int cur_maxcomment = ind_maxcomment;
 
-  for (;;) {
+  while (true) {
     pos = findmatchlimit(NULL, 'R', FM_BACKWARD, cur_maxcomment);
     if (pos == NULL) {
       break;
@@ -412,7 +413,7 @@ static int cin_isinit(void)
     s = cin_skipcomment(s + 7);
   }
 
-  for (;;) {
+  while (true) {
     int i, l;
 
     for (i = 0; i < (int)ARRAY_SIZE(skip); i++) {
@@ -525,7 +526,9 @@ static bool cin_is_cpp_namespace(const char *s)
 
   s = cin_skipcomment(s);
 
-  if (strncmp(s, "inline", 6) == 0 && (s[6] == NUL || !vim_iswordc((uint8_t)s[6]))) {
+  // skip over "inline" and "export" in any order
+  while ((strncmp(s, "inline", 6) == 0 || strncmp(s, "export", 6) == 0)
+         && (s[6] == NUL || !vim_iswordc((uint8_t)s[6]))) {
     s = cin_skipcomment(skipwhite(s + 6));
   }
 
@@ -754,7 +757,7 @@ static int cin_ispreproc_cont(const char **pp, linenr_T *lnump, int *amount)
     candidate_amount = get_indent_lnum(lnum);
   }
 
-  for (;;) {
+  while (true) {
     if (cin_ispreproc(line)) {
       retval = true;
       *lnump = lnum;
@@ -927,7 +930,7 @@ static int cin_isfuncdecl(const char **sp, linenr_T first_lnum, linenr_T min_lnu
       // At the end: check for ',' in the next line, for this style:
       // func(arg1
       //       , arg2)
-      for (;;) {
+      while (true) {
         if (lnum >= curbuf->b_ml.ml_line_count) {
           break;
         }
@@ -1184,7 +1187,7 @@ static int cin_is_cpp_baseclass(cpp_baseclass_cache_T *cached)
   pos->lnum = lnum;
   line = ml_get(lnum);
   s = line;
-  for (;;) {
+  while (true) {
     if (*s == NUL) {
       if (lnum == curwin->w_cursor.lnum) {
         break;
@@ -1194,7 +1197,7 @@ static int cin_is_cpp_baseclass(cpp_baseclass_cache_T *cached)
       s = line;
     }
     if (s == line) {
-      // don't recognize "case (foo):" as a baseclass */
+      // don't recognize "case (foo):" as a baseclass
       if (cin_iscase(s, false)) {
         break;
       }
@@ -1504,10 +1507,10 @@ static pos_T *find_match_paren_after_brace(int ind_maxparen)
 // looking a few lines further.
 static int corr_ind_maxparen(pos_T *startpos)
 {
-  long n = (long)startpos->lnum - (long)curwin->w_cursor.lnum;
+  int n = startpos->lnum - curwin->w_cursor.lnum;
 
   if (n > 0 && n < curbuf->b_ind_maxparen / 2) {
-    return curbuf->b_ind_maxparen - (int)n;
+    return curbuf->b_ind_maxparen - n;
   }
   return curbuf->b_ind_maxparen;
 }
@@ -2499,7 +2502,7 @@ int get_c_indent(void)
         // the usual amount relative to the conditional
         // that opens the block.
         curwin->w_cursor = cur_curpos;
-        for (;;) {
+        while (true) {
           curwin->w_cursor.lnum--;
           curwin->w_cursor.col = 0;
 
@@ -2529,8 +2532,6 @@ int get_c_indent(void)
                 break;
               }
 
-              l = get_cursor_line_ptr();
-
               // If we're in a comment or raw string now, skip to
               // the start of it.
               trypos = ind_find_start_CORS(NULL);
@@ -2540,9 +2541,9 @@ int get_c_indent(void)
                 continue;
               }
 
-              //
+              l = get_cursor_line_ptr();
+
               // Skip preprocessor directives and blank lines.
-              //
               if (cin_ispreproc_cont(&l, &curwin->w_cursor.lnum, &amount)) {
                 continue;
               }
@@ -2640,8 +2641,6 @@ int get_c_indent(void)
                   break;
                 }
 
-                l = get_cursor_line_ptr();
-
                 // If we're in a comment or raw string now, skip
                 // to the start of it.
                 trypos = ind_find_start_CORS(NULL);
@@ -2650,6 +2649,8 @@ int get_c_indent(void)
                   curwin->w_cursor.col = 0;
                   continue;
                 }
+
+                l = get_cursor_line_ptr();
 
                 // Skip preprocessor directives and blank lines.
                 if (cin_ispreproc_cont(&l, &curwin->w_cursor.lnum, &amount)) {
@@ -2916,11 +2917,15 @@ int get_c_indent(void)
               trypos = NULL;
             }
 
+            l = get_cursor_line_ptr();
+
             // If we are looking for ',', we also look for matching
             // braces.
-            if (trypos == NULL && terminated == ','
-                && find_last_paren(l, '{', '}')) {
-              trypos = find_start_brace();
+            if (trypos == NULL && terminated == ',') {
+              if (find_last_paren(l, '{', '}')) {
+                trypos = find_start_brace();
+              }
+              l = get_cursor_line_ptr();
             }
 
             if (trypos != NULL) {
@@ -2951,6 +2956,7 @@ int get_c_indent(void)
                 curwin->w_cursor.lnum--;
                 curwin->w_cursor.col = 0;
               }
+              l = get_cursor_line_ptr();
             }
 
             // Get indent and pointer to text for current line,
@@ -3099,8 +3105,8 @@ int get_c_indent(void)
               } else {
                 // Found first unterminated line on a row, may
                 // line up with this line, remember its indent
-                //          100 +  //  NOLINT(whitespace/tab)
-                // ->       here;  //  NOLINT(whitespace/tab)
+                //          100 +
+                // ->       here;
                 l = get_cursor_line_ptr();
                 amount = cur_amount;
 
@@ -3413,9 +3419,7 @@ term_again:
       break;
     }
 
-    //
     // Skip preprocessor directives and blank lines.
-    //
     if (cin_ispreproc_cont(&l, &curwin->w_cursor.lnum, &amount)) {
       continue;
     }
@@ -3649,7 +3653,7 @@ static int find_match(int lookfor, linenr_T ourscope)
     if (cin_iselse(look)) {
       mightbeif = cin_skipcomment(look + 4);
       if (!cin_isif(mightbeif)) {
-        elselevel++;  // NOLINT(readability/braces)
+        elselevel++;
       }
       continue;
     }
@@ -3664,7 +3668,7 @@ static int find_match(int lookfor, linenr_T ourscope)
     // If it's an "if" decrement elselevel
     look = cin_skipcomment(get_cursor_line_ptr());
     if (cin_isif(look)) {
-      elselevel--;  // NOLINT(readability/braces)
+      elselevel--;
       // When looking for an "if" ignore "while"s that
       // get in the way.
       if (elselevel == 0 && lookfor == LOOKFOR_IF) {

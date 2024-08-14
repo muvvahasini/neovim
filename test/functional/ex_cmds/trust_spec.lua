@@ -1,27 +1,29 @@
-local helpers = require('test.functional.helpers')(after_each)
-local Screen = require('test.functional.ui.screen')
+local t = require('test.testutil')
+local n = require('test.functional.testnvim')()
 
-local eq = helpers.eq
-local clear = helpers.clear
-local command = helpers.command
-local pathsep = helpers.get_pathsep()
-local is_os = helpers.is_os
-local funcs = helpers.funcs
+local eq = t.eq
+local clear = n.clear
+local command = n.command
+local exec_capture = n.exec_capture
+local matches = t.matches
+local pathsep = n.get_pathsep()
+local is_os = t.is_os
+local fn = n.fn
 
 describe(':trust', function()
   local xstate = 'Xstate'
 
   setup(function()
-    helpers.mkdir_p(xstate .. pathsep .. (is_os('win') and 'nvim-data' or 'nvim'))
+    n.mkdir_p(xstate .. pathsep .. (is_os('win') and 'nvim-data' or 'nvim'))
   end)
 
   teardown(function()
-    helpers.rmdir(xstate)
+    n.rmdir(xstate)
   end)
 
   before_each(function()
-    helpers.write_file('test_file', 'test')
-    clear{env={XDG_STATE_HOME=xstate}}
+    t.write_file('test_file', 'test')
+    clear { env = { XDG_STATE_HOME = xstate } }
   end)
 
   after_each(function()
@@ -29,148 +31,53 @@ describe(':trust', function()
   end)
 
   it('trust then deny then remove a file using current buffer', function()
-    local screen = Screen.new(80, 8)
-    screen:attach()
-    screen:set_default_attr_ids({
-      [1] = {bold = true, foreground = Screen.colors.Blue1},
-    })
-
-    local cwd = funcs.getcwd()
-    local hash = funcs.sha256(helpers.read_file('test_file'))
+    local cwd = fn.getcwd()
+    local hash = fn.sha256(t.read_file('test_file'))
 
     command('edit test_file')
-    command('trust')
-    screen:expect([[
-      ^test                                                                            |
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      "]] .. cwd .. pathsep .. [[test_file" trusted.{MATCH:%s+}|
-    ]])
-    local trust = helpers.read_file(funcs.stdpath('state') .. pathsep .. 'trust')
+    matches('^Allowed ".*test_file" in trust database%.$', exec_capture('trust'))
+    local trust = t.read_file(fn.stdpath('state') .. pathsep .. 'trust')
     eq(string.format('%s %s', hash, cwd .. pathsep .. 'test_file'), vim.trim(trust))
 
-    command('trust ++deny')
-    screen:expect([[
-      ^test                                                                            |
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      "]] .. cwd .. pathsep .. [[test_file" denied.{MATCH:%s+}|
-    ]])
-    trust = helpers.read_file(funcs.stdpath('state') .. pathsep .. 'trust')
+    matches('^Denied ".*test_file" in trust database%.$', exec_capture('trust ++deny'))
+    trust = t.read_file(fn.stdpath('state') .. pathsep .. 'trust')
     eq(string.format('! %s', cwd .. pathsep .. 'test_file'), vim.trim(trust))
 
-    command('trust ++remove')
-    screen:expect([[
-      ^test                                                                            |
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      "]] .. cwd .. pathsep .. [[test_file" removed.{MATCH:%s+}|
-    ]])
-    trust = helpers.read_file(funcs.stdpath('state') .. pathsep .. 'trust')
+    matches('^Removed ".*test_file" from trust database%.$', exec_capture('trust ++remove'))
+    trust = t.read_file(fn.stdpath('state') .. pathsep .. 'trust')
     eq(string.format(''), vim.trim(trust))
   end)
 
   it('deny then trust then remove a file using current buffer', function()
-    local screen = Screen.new(80, 8)
-    screen:attach()
-    screen:set_default_attr_ids({
-      [1] = {bold = true, foreground = Screen.colors.Blue1},
-    })
-
-    local cwd = funcs.getcwd()
-    local hash = funcs.sha256(helpers.read_file('test_file'))
+    local cwd = fn.getcwd()
+    local hash = fn.sha256(t.read_file('test_file'))
 
     command('edit test_file')
-    command('trust ++deny')
-    screen:expect([[
-      ^test                                                                            |
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      "]] .. cwd .. pathsep .. [[test_file" denied.{MATCH:%s+}|
-    ]])
-    local trust = helpers.read_file(funcs.stdpath('state') .. pathsep .. 'trust')
+    matches('^Denied ".*test_file" in trust database%.$', exec_capture('trust ++deny'))
+    local trust = t.read_file(fn.stdpath('state') .. pathsep .. 'trust')
     eq(string.format('! %s', cwd .. pathsep .. 'test_file'), vim.trim(trust))
 
-    command('trust')
-    screen:expect([[
-      ^test                                                                            |
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      "]] .. cwd .. pathsep .. [[test_file" trusted.{MATCH:%s+}|
-    ]])
-    trust = helpers.read_file(funcs.stdpath('state') .. pathsep .. 'trust')
+    matches('^Allowed ".*test_file" in trust database%.$', exec_capture('trust'))
+    trust = t.read_file(fn.stdpath('state') .. pathsep .. 'trust')
     eq(string.format('%s %s', hash, cwd .. pathsep .. 'test_file'), vim.trim(trust))
 
-    command('trust ++remove')
-    screen:expect([[
-      ^test                                                                            |
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      "]] .. cwd .. pathsep .. [[test_file" removed.{MATCH:%s+}|
-    ]])
-    trust = helpers.read_file(funcs.stdpath('state') .. pathsep .. 'trust')
+    matches('^Removed ".*test_file" from trust database%.$', exec_capture('trust ++remove'))
+    trust = t.read_file(fn.stdpath('state') .. pathsep .. 'trust')
     eq(string.format(''), vim.trim(trust))
   end)
 
   it('deny then remove a file using file path', function()
-    local screen = Screen.new(80, 8)
-    screen:attach()
-    screen:set_default_attr_ids({
-      [1] = {bold = true, foreground = Screen.colors.Blue1},
-    })
+    local cwd = fn.getcwd()
 
-    local cwd = funcs.getcwd()
-
-    command('trust ++deny test_file')
-    screen:expect([[
-      ^                                                                                |
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      "]] .. cwd .. pathsep .. [[test_file" denied.{MATCH:%s+}|
-    ]])
-    local trust = helpers.read_file(funcs.stdpath('state') .. pathsep .. 'trust')
+    matches('^Denied ".*test_file" in trust database%.$', exec_capture('trust ++deny test_file'))
+    local trust = t.read_file(fn.stdpath('state') .. pathsep .. 'trust')
     eq(string.format('! %s', cwd .. pathsep .. 'test_file'), vim.trim(trust))
 
-    command('trust ++remove test_file')
-    screen:expect([[
-      ^                                                                                |
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      {1:~                                                                               }|
-      "]] .. cwd .. pathsep .. [[test_file" removed.{MATCH:%s+}|
-    ]])
-    trust = helpers.read_file(funcs.stdpath('state') .. pathsep .. 'trust')
+    matches(
+      '^Removed ".*test_file" from trust database%.$',
+      exec_capture('trust ++remove test_file')
+    )
+    trust = t.read_file(fn.stdpath('state') .. pathsep .. 'trust')
     eq(string.format(''), vim.trim(trust))
   end)
 end)

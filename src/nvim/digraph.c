@@ -1,6 +1,3 @@
-// This is an open source non-commercial project. Dear PVS-Studio, please check
-// it. PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-
 /// @file digraph.c
 ///
 /// code for digraphs
@@ -10,47 +7,51 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "nvim/ascii.h"
+#include "nvim/ascii_defs.h"
 #include "nvim/buffer_defs.h"
 #include "nvim/charset.h"
 #include "nvim/digraph.h"
 #include "nvim/drawscreen.h"
+#include "nvim/errors.h"
+#include "nvim/eval.h"
 #include "nvim/eval/typval.h"
-#include "nvim/eval/typval_defs.h"
 #include "nvim/ex_cmds_defs.h"
 #include "nvim/ex_docmd.h"
 #include "nvim/ex_getln.h"
 #include "nvim/garray.h"
 #include "nvim/getchar.h"
-#include "nvim/gettext.h"
+#include "nvim/gettext_defs.h"
 #include "nvim/globals.h"
+#include "nvim/highlight.h"
 #include "nvim/highlight_defs.h"
 #include "nvim/keycodes.h"
 #include "nvim/mapping.h"
 #include "nvim/mbyte.h"
+#include "nvim/mbyte_defs.h"
 #include "nvim/memory.h"
 #include "nvim/message.h"
 #include "nvim/normal.h"
-#include "nvim/option_defs.h"
+#include "nvim/option_vars.h"
 #include "nvim/os/input.h"
 #include "nvim/runtime.h"
+#include "nvim/state_defs.h"
 #include "nvim/strings.h"
-#include "nvim/types.h"
-#include "nvim/vim.h"
+#include "nvim/types_defs.h"
+#include "nvim/vim_defs.h"
 
 typedef int result_T;
 
-typedef struct digraph {
-  char_u char1;
-  char_u char2;
+typedef struct {
+  uint8_t char1;
+  uint8_t char2;
   result_T result;
 } digr_T;
 
-static char e_digraph_must_be_just_two_characters_str[]
+static const char e_digraph_must_be_just_two_characters_str[]
   = N_("E1214: Digraph must be just two characters: %s");
-static char e_digraph_argument_must_be_one_character_str[]
+static const char e_digraph_argument_must_be_one_character_str[]
   = N_("E1215: Digraph must be one character: %s");
-static char e_digraph_setlist_argument_must_be_list_of_lists_with_two_items[]
+static const char e_digraph_setlist_argument_must_be_list_of_lists_with_two_items[]
   = N_("E1216: digraph_setlist() argument must be a list of lists with two items");
 
 #ifdef INCLUDE_GENERATED_DECLARATIONS
@@ -879,6 +880,7 @@ static digr_T digraphdefault[] =
   { '1', '\'', 0x2032 },
   { '2', '\'', 0x2033 },
   { '3', '\'', 0x2034 },
+  { '4', '\'', 0x2057 },
   { '1', '"', 0x2035 },
   { '2', '"', 0x2036 },
   { '3', '"', 0x2037 },
@@ -1493,7 +1495,7 @@ char *get_digraph_for_char(int val_arg)
 {
   const int val = val_arg;
   const digr_T *dp;
-  static char_u r[3];
+  static char r[3];
 
   for (int use_defaults = 0; use_defaults <= 1; use_defaults++) {
     if (use_defaults == 0) {
@@ -1503,10 +1505,10 @@ char *get_digraph_for_char(int val_arg)
     }
     for (int i = 0; use_defaults ? dp->char1 != NUL : i < user_digraphs.ga_len; i++) {
       if (dp->result == val) {
-        r[0] = dp->char1;
-        r[1] = dp->char2;
+        r[0] = (char)dp->char1;
+        r[1] = (char)dp->char2;
         r[2] = NUL;
-        return (char *)r;
+        return r;
       }
       dp++;
     }
@@ -1623,7 +1625,7 @@ int digraph_get(int char1, int char2, bool meta_char)
 
   if (((retval = getexactdigraph(char1, char2, meta_char)) == char2)
       && (char1 != char2)
-      && ((retval = getexactdigraph(char2, char1, meta_char))  // -V764
+      && ((retval = getexactdigraph(char2, char1, meta_char))
           == char1)) {
     return char2;
   }
@@ -1645,8 +1647,8 @@ static void registerdigraph(int char1, int char2, int n)
 
   // Add a new digraph to the table.
   dp = GA_APPEND_VIA_PTR(digr_T, &user_digraphs);
-  dp->char1 = (char_u)char1;
-  dp->char2 = (char_u)char2;
+  dp->char1 = (uint8_t)char1;
+  dp->char2 = (uint8_t)char2;
   dp->result = n;
 }
 
@@ -1656,7 +1658,7 @@ static void registerdigraph(int char1, int char2, int n)
 bool check_digraph_chars_valid(int char1, int char2)
 {
   if (char2 == 0) {
-    char msg[MB_MAXBYTES + 1];
+    char msg[MB_MAXCHAR + 1];
     msg[utf_char2bytes(char1, msg)] = NUL;
     semsg(_(e_digraph_must_be_just_two_characters_str), msg);
     return false;
@@ -1705,7 +1707,7 @@ static void digraph_header(const char *msg)
   if (msg_col > 0) {
     msg_putchar('\n');
   }
-  msg_outtrans_attr(msg, HL_ATTR(HLF_CM));
+  msg_outtrans(msg, HL_ATTR(HLF_CM));
   msg_putchar('\n');
 }
 
@@ -1859,7 +1861,7 @@ static void printdigraph(const digr_T *dp, result_T *previous)
   *p++ = (char)dp->char2;
   *p++ = ' ';
   *p = NUL;
-  msg_outtrans(buf);
+  msg_outtrans(buf, 0);
   p = buf;
 
   // add a space to draw a composing char on
@@ -1869,14 +1871,14 @@ static void printdigraph(const digr_T *dp, result_T *previous)
   p += utf_char2bytes(dp->result, p);
 
   *p = NUL;
-  msg_outtrans_attr(buf, HL_ATTR(HLF_8));
+  msg_outtrans(buf, HL_ATTR(HLF_8));
   p = buf;
   if (char2cells(dp->result) == 1) {
     *p++ = ' ';
   }
   assert(p >= buf);
   vim_snprintf(p, sizeof(buf) - (size_t)(p - buf), " %3d", dp->result);
-  msg_outtrans(buf);
+  msg_outtrans(buf, 0);
 }
 
 /// Get the two digraph characters from a typval.
@@ -2043,13 +2045,10 @@ char *keymap_init(void)
     keymap_unload();
     do_cmdline_cmd("unlet! b:keymap_name");
   } else {
-    char *buf;
-    size_t buflen;
-
     // Source the keymap file.  It will contain a ":loadkeymap" command
     // which will call ex_loadkeymap() below.
-    buflen = strlen(curbuf->b_p_keymap) + strlen(p_enc) + 14;
-    buf = xmalloc(buflen);
+    size_t buflen = strlen(curbuf->b_p_keymap) + strlen(p_enc) + 14;
+    char *buf = xmalloc(buflen);
 
     // try finding "keymap/'keymap'_'encoding'.vim"  in 'runtimepath'
     vim_snprintf(buf, buflen, "keymap/%s_%s.vim",
@@ -2076,13 +2075,11 @@ char *keymap_init(void)
 /// @param eap
 void ex_loadkeymap(exarg_T *eap)
 {
-  char *s;
-
 #define KMAP_LLEN 200  // max length of "to" and "from" together
   char buf[KMAP_LLEN + 11];
   char *save_cpo = p_cpo;
 
-  if (!getline_equal(eap->getline, eap->cookie, getsourceline)) {
+  if (!getline_equal(eap->ea_getline, eap->cookie, getsourceline)) {
     emsg(_("E105: Using :loadkeymap not in a sourced file"));
     return;
   }
@@ -2097,8 +2094,8 @@ void ex_loadkeymap(exarg_T *eap)
   p_cpo = "C";
 
   // Get each line of the sourced file, break at the end.
-  for (;;) {
-    char *line = eap->getline(0, eap->cookie, 0, true);
+  while (true) {
+    char *line = eap->ea_getline(0, eap->cookie, 0, true);
 
     if (line == NULL) {
       break;
@@ -2108,11 +2105,11 @@ void ex_loadkeymap(exarg_T *eap)
 
     if ((*p != '"') && (*p != NUL)) {
       kmap_T *kp = GA_APPEND_VIA_PTR(kmap_T, &curbuf->b_kmap_ga);
-      s = skiptowhite(p);
-      kp->from = xstrnsave(p, (size_t)(s - p));
+      char *s = skiptowhite(p);
+      kp->from = xmemdupz(p, (size_t)(s - p));
       p = skipwhite(s);
       s = skiptowhite(p);
-      kp->to = xstrnsave(p, (size_t)(s - p));
+      kp->to = xmemdupz(p, (size_t)(s - p));
 
       if ((strlen(kp->from) + strlen(kp->to) >= KMAP_LLEN)
           || (*kp->from == NUL)
@@ -2133,7 +2130,7 @@ void ex_loadkeymap(exarg_T *eap)
     vim_snprintf(buf, sizeof(buf), "<buffer> %s %s",
                  ((kmap_T *)curbuf->b_kmap_ga.ga_data)[i].from,
                  ((kmap_T *)curbuf->b_kmap_ga.ga_data)[i].to);
-    (void)do_map(MAPTYPE_MAP, buf, MODE_LANGMAP, false);
+    do_map(MAPTYPE_MAP, buf, MODE_LANGMAP, false);
   }
 
   p_cpo = save_cpo;
@@ -2170,7 +2167,7 @@ static void keymap_unload(void)
 
   for (int i = 0; i < curbuf->b_kmap_ga.ga_len; i++) {
     vim_snprintf(buf, sizeof(buf), "<buffer> %s", kp[i].from);
-    (void)do_map(MAPTYPE_UNMAP, buf, MODE_LANGMAP, false);
+    do_map(MAPTYPE_UNMAP, buf, MODE_LANGMAP, false);
   }
   keymap_ga_clear(&curbuf->b_kmap_ga);
 
@@ -2179,4 +2176,42 @@ static void keymap_unload(void)
   ga_clear(&curbuf->b_kmap_ga);
   curbuf->b_kmap_state &= ~KEYMAP_LOADED;
   status_redraw_curbuf();
+}
+
+/// Get the value to show for the language mappings, active 'keymap'.
+///
+/// @param fmt  format string containing one %s item
+/// @param buf  buffer for the result
+/// @param len  length of buffer
+bool get_keymap_str(win_T *wp, char *fmt, char *buf, int len)
+{
+  char *p;
+
+  if (wp->w_buffer->b_p_iminsert != B_IMODE_LMAP) {
+    return false;
+  }
+
+  buf_T *old_curbuf = curbuf;
+  win_T *old_curwin = curwin;
+
+  curbuf = wp->w_buffer;
+  curwin = wp;
+  STRCPY(buf, "b:keymap_name");       // must be writable
+  emsg_skip++;
+  char *s = p = eval_to_string(buf, false, false);
+  emsg_skip--;
+  curbuf = old_curbuf;
+  curwin = old_curwin;
+  if (p == NULL || *p == NUL) {
+    if (wp->w_buffer->b_kmap_state & KEYMAP_LOADED) {
+      p = wp->w_buffer->b_p_keymap;
+    } else {
+      p = "lang";
+    }
+  }
+  if (vim_snprintf(buf, (size_t)len, fmt, p) > len - 1) {
+    buf[0] = NUL;
+  }
+  xfree(s);
+  return buf[0] != NUL;
 }

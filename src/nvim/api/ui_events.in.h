@@ -1,5 +1,4 @@
-#ifndef NVIM_API_UI_EVENTS_IN_H
-#define NVIM_API_UI_EVENTS_IN_H
+#pragma once
 
 // This file is not compiled, just parsed for definitions
 #ifdef INCLUDE_GENERATED_DECLARATIONS
@@ -40,6 +39,8 @@ void screenshot(String path)
   FUNC_API_SINCE(7);
 void option_set(String name, Object value)
   FUNC_API_SINCE(4);
+void chdir(String path)
+  FUNC_API_SINCE(12);
 // Stop event is not exported as such, represented by EOF in the msgpack stream.
 void stop(void)
   FUNC_API_NOEXPORT;
@@ -82,7 +83,7 @@ void grid_clear(Integer grid)
   FUNC_API_SINCE(5) FUNC_API_REMOTE_IMPL;
 void grid_cursor_goto(Integer grid, Integer row, Integer col)
   FUNC_API_SINCE(5) FUNC_API_REMOTE_IMPL FUNC_API_COMPOSITOR_IMPL;
-void grid_line(Integer grid, Integer row, Integer col_start, Array data)
+void grid_line(Integer grid, Integer row, Integer col_start, Array data, Boolean wrap)
   FUNC_API_SINCE(5) FUNC_API_REMOTE_ONLY FUNC_API_CLIENT_IMPL;
 void grid_scroll(Integer grid, Integer top, Integer bot, Integer left, Integer right, Integer rows,
                  Integer cols)
@@ -114,8 +115,12 @@ void msg_set_pos(Integer grid, Integer row, Boolean scrolled, String sep_char)
   FUNC_API_SINCE(6) FUNC_API_COMPOSITOR_IMPL FUNC_API_CLIENT_IGNORE;
 
 void win_viewport(Integer grid, Window win, Integer topline, Integer botline, Integer curline,
-                  Integer curcol, Integer line_count)
+                  Integer curcol, Integer line_count, Integer scroll_delta)
   FUNC_API_SINCE(7) FUNC_API_CLIENT_IGNORE;
+
+void win_viewport_margins(Integer grid, Window win, Integer top, Integer bottom, Integer left,
+                          Integer right)
+  FUNC_API_SINCE(12) FUNC_API_CLIENT_IGNORE;
 
 void win_extmark(Integer grid, Window win, Integer ns_id, Integer mark_id, Integer row, Integer col)
   FUNC_API_SINCE(10) FUNC_API_REMOTE_ONLY;
@@ -167,4 +172,6 @@ void msg_history_show(Array entries)
   FUNC_API_SINCE(6) FUNC_API_REMOTE_ONLY;
 void msg_history_clear(void)
   FUNC_API_SINCE(10) FUNC_API_REMOTE_ONLY;
-#endif  // NVIM_API_UI_EVENTS_IN_H
+
+void error_exit(Integer status)
+  FUNC_API_SINCE(12);

@@ -1,16 +1,8 @@
-if(USE_EXISTING_SRC_DIR)
-  unset(TREESITTER_URL)
-endif()
-ExternalProject_Add(tree-sitter
-  URL ${TREESITTER_URL}
-  URL_HASH SHA256=${TREESITTER_SHA256}
-  DOWNLOAD_NO_PROGRESS TRUE
-  DOWNLOAD_DIR ${DEPS_DOWNLOAD_DIR}/tree-sitter
-  INSTALL_DIR ${DEPS_INSTALL_DIR}
+get_externalproject_options(treesitter ${DEPS_IGNORE_SHA})
+ExternalProject_Add(treesitter
+  DOWNLOAD_DIR ${DEPS_DOWNLOAD_DIR}/treesitter
   PATCH_COMMAND ${CMAKE_COMMAND} -E copy
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/TreesitterCMakeLists.txt
-    ${DEPS_BUILD_DIR}/src/tree-sitter/CMakeLists.txt
+    ${DEPS_BUILD_DIR}/src/treesitter/CMakeLists.txt
   CMAKE_ARGS ${DEPS_CMAKE_ARGS}
-  CMAKE_CACHE_ARGS ${DEPS_CMAKE_CACHE_ARGS})
-
-list(APPEND THIRD_PARTY_DEPS tree-sitter)
+  ${EXTERNALPROJECT_OPTIONS})

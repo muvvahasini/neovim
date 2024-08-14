@@ -526,8 +526,8 @@ msgstr " Käyttäjän määrittelemä täydennys (^U^N^P)"
 msgid " Omni completion (^O^N^P)"
 msgstr " Omnitäydennys (^O^N^P)"
 
-msgid " Spelling suggestion (s^N^P)"
-msgstr " Oikaisulukuehdotus (s^N^P)"
+msgid " Spelling suggestion (^S^N^P)"
+msgstr " Oikaisulukuehdotus (^S^N^P)"
 
 msgid " Keyword Local completion (^N^P)"
 msgstr " Avainsanan paikallinen täydennys (^N^P)"
@@ -5540,7 +5540,7 @@ msgstr "tekijät Bram Moolenaar et al."
 #~ msgstr "kirjoita :help iccf<Enter>    lisätietoa varten            "
 
 #, fuzzy
-#~ msgid "type  :CheckHealth<Enter>     to optimize Nvim"
+#~ msgid "type  :checkhealth<Enter>     to optimize Nvim"
 #~ msgstr "kirjoita :help iccf<Enter>    lisätietoa varten            "
 
 msgid "type  :q<Enter>               to exit         "
